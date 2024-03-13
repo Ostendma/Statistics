@@ -1,0 +1,205 @@
+---
+title: "Problem Set 7"
+author: "Matt Ostendorf"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(knitr)
+library(ggpubr)
+library(boot)
+library(lawstat)
+```
+
+## Introduction
+
+Please complete the following tasks regarding the data in R. Please generate a solution document in R markdown and upload the .Rmd document and a rendered .doc, .docx, or .pdf document. Your work should be based on the data's being in the same folder as the .Rmd file. Please turn in your work on Canvas. Your solution document should have your answers to the questions and should display the requested plots.
+
+These questions were rendered in R markdown through RStudio (<https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf>, <http://rmarkdown.rstudio.com> ).
+
+# Question 1
+
+The precipitation data in "precip.txt" are precipitation values for Boulder, CO from <https://www.esrl.noaa.gov/psd/boulder/Boulder.mm.precip.html> downloaded 2/17/2022.
+
+Precipitation includes rain, snow, and hail. Snow/ice water amounts are either directly measured or a ratio of 1/10 applied for inches of snow to water equivalent.
+
+The purpose of this analysis is to assess the null hypothesis that the total annual rainfalls in the early portion and the total annual rainfalls in the recent portion of the data are each independent identically distributed (i.i.d.) samples from Normally distributed populations with equal means, $Normal(\mu,\sigma^2_{early})$ and $Normal(\mu,\sigma^2_{recent})$.
+
+Unlike in a class setting, in practice, data formatting is often a major component of a data analysis project. Some basic formatting of the data in "precip.txt" is included below for reference.
+
+The symbol "Tr" represents a trace amount of precipitation. Observations marked by a "\*" were made at a non-standard site. Some light-duty data formatting appears below that sets "Tr" values to $0$ and drops years that include an observation made at a non-standard site.
+
+The code provided below reads in the precipitation data. The values are tab-separated. Most columns are assigned the string class, "chr".
+
+```{r}
+dat<-read.table("precip_2021.txt",sep="\t",header = TRUE)
+
+```
+
+The following replaces all column names with lower case versions. For example, "TOTAL" becomes "total". The command "names(dat)" is used to verify that the replacement has succeeded.
+
+```{r}
+
+# Change all characters in the variable names to lower case.
+names(dat)<-str_to_lower(names(dat))
+names(dat)
+
+```
+
+Replace all occurrences of "Tr" with 0. Verify that this was successful.
+
+```{r}
+# Replace "Tr".
+dat<-mutate_all(dat,str_replace,"Tr","0")
+# Count all occurrences of "Tr".
+sum(str_detect(unlist(dat),"Tr"))
+
+```
+
+Drop all rows that include an asterisk indicating an observation at a non-standard location. The method for this is to write a function that takes a vector of strings as its argument and returns "TRUE" if none of the strings contains an asterisk, "FALSE" otherwise. Then apply this function to each row of the data to generate a Boolean vector. Finally,using this vector, reduce the data set to only those rows without asterisks.
+
+Note that the asterisk has a special meaning in string manipulation so the backslashes are used to look for a literal asterisk.
+
+<https://cran.r-project.org/web/packages/stringr/vignettes/regular-expressions.html>
+
+```{r}
+# function to return TRUE if a string vector x contains no entries with an "*".
+no_stars<-function(x){
+  sum(str_detect(x,"\\*"))==0
+}
+
+# Count asterisks in the data.
+sum(str_detect(unlist(dat),"\\*"))
+# Identify the rows in the data with at least 1 "*".
+all.standard<-apply(dat,1,no_stars)
+dat.trim<-dat[all.standard,]
+# Count asterisks in the trimmed data.
+sum(str_detect(unlist(dat.trim),"\\*"))
+
+```
+
+Set all precipitation columns in "dat.trim" to be of "numeric" class using the "as.numeric" function. Make the "year" column to be of class "integer". Verify the success of this by running "sapply(dat,class)" and displaying the results.
+
+Verify that converting the strings to numeric values didn't produce any "NA"s.
+
+```{r}
+dat.trim<-mutate_all(dat.trim,as.numeric)
+dat.trim[,1]<-as.integer(dat.trim[,1])
+
+sapply(dat.trim,class)
+
+sum(is.na(dat))
+which(is.na(dat), arr.ind=TRUE)
+```
+
+Identify the omitted years in "dat.trim".
+
+```{r}
+setdiff(min(dat.trim$year):max(dat.trim$year),dat.trim$year)
+```
+
+## Question 1, part 1
+
+(10 points)
+
+Since values in successive years may be related by persistent weather patterns, the data are thinned to every third entry in "dat.s"
+
+For Welch's test to be a valid test of the null hypothesis of equality of population means, both populations should be (approximately) Normally distributed.
+
+Please provide a visual assessment of the consistency with Normality of the first 15 values for "year.total" in "dat.s" and of the consistency with Normality of the last 15 values for "year.total" in "dat.s". Please give a verbal assessment based on the visualization. Within each period, are these data consistent with Normality?
+
+Based on the plots below the data appears to be fairly normal as all the points fall within the accepted range. The early plot appears to be more normal where as the recent plot has more deviates more, but is still within an acceptable range to be considered normal.
+
+```{r}
+
+dat.s<-filter(dat.trim,year%%3==2)
+
+dat.sep<-dat.s[c(1:15,(nrow(dat.s)-14):nrow(dat.s)),]
+dat.sep$era<-rep(c("early","recent"),
+            times=c(15,15))
+
+dat.early.df = data.frame(dat.s$year[c(1:15)],dat.s$year.total[c(1:15)])
+colnames(dat.early.df) = c('year', 'total')
+dat.early = dat.s$year.total[c(1:15)]
+dat.recent.df = data.frame(tail(dat.s$year, n =15), tail(dat.s$year.total, n =15))
+colnames(dat.recent.df) = c('year', 'total')
+
+# your plotting code here
+ggqqplot(dat.early.df$total) + labs(title = "Early")
+ggqqplot(dat.recent.df$total) + labs(title = "Recent")
+
+
+```
+
+## Question 1, part 2
+
+(10 points)
+
+For Welch's test to be a valid test of the null hypothesis of equality of population means, the values in each group should be independent of one another.
+
+Please provide a visualization to examine whether the "year.total" values show smooth variation over time, an indication of dependence, or whether the "year.total" values at consecutive time points in "dat.s" within the early (first 15 in dat.s, 1895-1937) period appear to be independent of one another and the "year.total" values at consecutive time points in "dat.s" within the recent(last 15 in dat.s, 1979-2021) periods appear to be independent. Please state your assessment.
+
+Looking at the plots below we see that the data is not grouped together in one area. With the data points being spread out on both plots we can state that the values are independent.
+
+```{r}
+ggplot(dat.early.df, aes(x= year, y = total)) + geom_point() 
+ggplot(dat.recent.df, aes(x= year, y = total)) + geom_point()
+
+```
+
+## Question 1, part 3
+
+(10 points)
+
+Please perform Welch's test of the null hypothesis that the total annual rainfalls in the early portion (first 15 values of dat.s) and the total annual rainfalls in the recent portion (last 15 values of dat.s) are each i.i.d. samples from Normally distributed populations with equal means, $Normal(\mu,\sigma^2_{early})$ and $Normal(\mu,\sigma^2_{recent})$. Please state your conclusion based on 1.a. and 1.b. regarding the null hypothesis that the means in the two populations are equal.
+
+When we run the Welch's test with 95% confidence we get a small p-value that is less than our alpha of .05. Since our p-value is so small we can reject the null hypothesis. This means statistically speaking there is a difference in annual rainfalls between the early population and the recent population.
+
+```{r}
+t.test(dat.early.df$total, dat.recent.df$total )
+```
+
+# Question 2
+
+The goal in this analysis is to perform the strongest suitable test of whether the precipitation amount differs annually between October and November.
+
+## Question 2, part 1
+
+(10 points)
+
+Please generate visualizations to address whether the differences between the precipitation in October and the following November in "dat.s" are consistent with being i.i.d. samples from a $Normal(\mu\sigma^2)$ distribution. Please address independence and Normality.
+
+## Answer Q2P1
+
+Based on the two plots below we can say that the data is normal and that it is independent. This is because the ggqqplot has majority of the data within an acceptable range of normality. Additionally the scatter plot has a fairly wide spread in the data indicating that it is independent.
+
+```{r}
+diff<-dat.s$nov-dat.s$oct
+ggqqplot(diff)
+ggplot(dat.s, aes(x= year, y = diff)) + geom_point()
+```
+
+## Question 2, part 2
+
+(10 points)
+
+Please perform the strongest test of the null hypothesis that the difference in precipitation between October and November in each year has mean equal to $0$.
+
+```{r}
+data_oct_nov = data.frame( 
+  year = dat.s$year,
+  oct = dat.s$oct,
+  nov = dat.s$nov
+  )
+
+pivot_month = data_oct_nov %>%
+  pivot_longer(cols=c('oct', 'nov'), names_to = 'Month', values_to = 'precip')
+t.test(precip ~ Month, data = pivot_month, paired = TRUE)
+```
+
+When we use a paired t test to compare the differences between October and November we get a p-value of .3009. This p-value is significantly higher than the .05 used in the confidence interval. Therefore we can fail to reject the null hypothesis. that there was no difference in the rates of precipitation between November and October of each year.g

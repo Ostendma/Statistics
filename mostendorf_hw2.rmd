@@ -1,0 +1,184 @@
+---
+title: "Problem Set 2"
+subtitle: "Comp 4441 Spring Quarter 2023"
+author: "Matt Ostendorf"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(HistData)
+library(tidyverse)
+```
+
+# Introduction
+
+These questions were rendered in R markdown through RStudio (<https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf>, <http://rmarkdown.rstudio.com> ).
+
+Please generate your solutions in R markdown and upload both a knitted doc, docx, or pdf document in addition to the Rmd file.
+Please put your name in the "author" section in the header.
+
+The questions in this problem set use material from the slides on discrete and continuous probability spaces and the `Rmd`s `Discrete_Probability_Distributions_2_3_3.Rmd` and `02_continuous_probability_distributions_in_r.rmd`
+
+# Load Data
+
+```{r}
+data("PolioTrials")
+dat<-PolioTrials
+```
+
+# Question 1
+
+Please carry out the analysis below and answer the questions that follow. For this assignment, please do all calculations in R and show the code and the results in the knit document.
+
+## Context
+
+Question 2 on problem set 1 addresses the question of whether the `NotInoculated` and `Placebo` groups in the `Randomized Control` experiment had statistically significantly different rates of paralytic polio. 
+
+Recall that the `NotInoculated` and `Placebo` groups differ in that the children in the `Placebo` group had been enrolled in the vaccine trial while the parents of the children in the `NotInoculated` group did not enroll their children. 
+
+The approach, using the `rbinom` function, implemented the idea that populations in the `NotInoculated` and `Placebo` groups in the `RandomizedControl` experiment were the same in regards to paralytic polio cases by using the `rbinom` function to assign paralytic polio cases in the combined `NotInoculated` and `Placebo` groups of the `RandomizedControl` experiment to the `Placebo` group with probability equal to the ratio of the size of the `Placebo` group to the size of pooled `Placebo` group and `NotInoculated` group.
+
+Note that the function `rbinom(x,size,prob)` simulates drawing $x$ random samples from `Binom(size,prob)`. 
+
+The computations for that analysis are reproduced here:
+
+```{r}
+n<-10000 # number of simulations
+
+# Calculate the number of paralytic polio cases in the pooled "Placebo" and "NotInoculated" group.
+ct<-sum(dat$Paralytic[2:3])
+
+# Calculate the proportion "prop" of the the pooled "Placebo" and "NotInoculated" group that are in the "Placebo" group.
+prop<-dat$Population[2]/sum(dat$Population[2:3])
+
+# Generate 10,000 counts of paralytic polio cases in the "Placebo" group under the model that each paralytic polio case in the pooled pooled "Placebo" and "NotInoculated" group has probability "prop" of being assigned to the "Placebo" group.
+set.seed(45678765)
+sim2<-rbinom(n,ct,prop) 
+qplot(sim2,bins=20)
+# proportion of the simulated counts of paralytic polio in the "Placebo" that are less than or equal to the observed count:
+mean(sim2<=dat$Paralytic[2])
+# proportion of the simulated counts of paralytic polio in the "Placebo" that are greater than or equal to the observed count:
+mean(sim2>=dat$Paralytic[2])
+```
+
+## Q1, part 1
+(10 points)
+
+Using the same null model described above, please calculate the probability that the count of paralytic polio cases in the `Placebo` group under the null model is less than or equal to  `dat$Paralytic[2]` directly rather than by simulating it. Recall that the function `pbinom(x,size,prob)` returns the probability of the event that the number of successes is in the set $\{0,1,...x\}$.
+
+
+```{r}
+result = pbinom(dat$Paralytic[2],ct,prop)
+str_glue("The probability that the count of paralytic polio cases in the placebo group is equal to the 115 is {result}")
+
+```
+
+)
+
+## Q1, part 2
+(10 points)
+
+Using the same null model described above, please calculate the probability that the count of paralytic polio cases in the `Placebo` group under the null model is greater than or equal to `dat$Paralytic[2]` directly rather than by simulating it. Hint: Denote the value in part 1 by $p$. This answer is not $1-p$. The value $1-p$ is the probability of the event that count of paralytic polio cases in the `Placebo` group under the null model is strictly greater than  `dat$Paralytic[2]`.
+
+
+```{r}
+#Dbinom provides the calculation at exactly 115. Combine with pbinom we can calculate greater than or equal to 115
+p = pbinom(dat$Paralytic[2],ct,prop,lower.tail = FALSE)
+d = dbinom(dat$Paralytic[2],ct,prop)
+
+result = p + d
+str_glue("The probability that the count of paraltic polio cases in the placebo group is greater than or equal to 115 is {result}")
+
+```
+
+)
+
+## Q1, part 3
+
+(10 points)
+
+Is the value computed in part 2 strong evidence against the null model? 
+
+Yes it is. The probability of getting 115 or greater cases is incredibly rare. We should reject the null hypothesis.
+
+# Question 2
+
+## Context
+
+This question concerns the uniform distribution on $[0,1]$, the continuous probability space $(\mathcal{S,M,P})$ with $\mathcal{S}=[0,1]$ and $\mathcal{P}$ defined by $\mathcal{P}(A)=\int_{A\cap[0,1]}1dx$ for measurable sets $A$ as described in the week 2 slides. This distribution will be important in hypothesis testing.
+
+## Q2
+
+(10 points)
+
+Are the events $A=\{s\in S|0\leq s \leq \frac{1}{2}\}$ and $B=\{s\in S|\frac{1}{4}\leq s \leq \frac{3}{4}\}$ independent. To answer this, please address the following questions:
+
+A) What is $\mathcal{P}(A)$? Probability of A is b-a, where b is .5 and a is 0. Therefore $\mathcal{P}(A)$ = .5.
+``` {r} 
+punif(.5) 
+```
+
+B) What is $\mathcal{P}(B)$? Probability of A is b-a, where b is .75 and a is .25. Therefore $\mathcal{P}(B)$ = .5.
+``` {r} 
+punif(.5,min=.25,max=.75) 
+```
+
+C) What is $\mathcal{P}(A\cap B)$? The intersection is the area in which A and B overlap. Which would be from .25 to .5. We can set b = .5 and a = .25 and  $\mathcal{P}(A\cap B)$ = .25.
+
+D) Are the events $A$ and $B$ independent? To determine independence $\mathcal{P}(A\cap B)$ =  $\mathcal{P}(A)$* $\mathcal{P}(B)$.  $\mathcal{P}(A)$ = .5,  $\mathcal{P}(B)$ = .5.  $\mathcal{P}(A)$ *  $\mathcal{P}(B)$ = .25. From problem c we know $\mathcal{P}(A\cap B)$ = .25. Therefore these events are independent.
+
+# Question 3
+
+## Context
+
+This question concerns the standard Normal distributions, the continuous probability space $(\mathcal{S,M,P})$ with $\mathcal{S}=(-\infty,\infty)$ and $\mathcal{P}$ defined by $\mathcal{P}(A)=\int_A\frac{1}{\sqrt{2\pi}}\exp \left(-\frac{x^2}{2}\right)dx$ for measurable sets $A$ as described in the week 2 slides. This distribution will be essential in future methods.
+
+## Q3
+
+(10 points)
+
+Are the events $A=\{s\in S|0\leq s \leq \frac{1}{2}\}$ and $B=\{s\in S|\frac{1}{4}\leq s \leq \frac{3}{4}\}$ independent. To answer this, please address the following questions:
+
+A) Please give a numerical approximation to $\mathcal{P}(A)$.
+
+```{r}
+resultA = pnorm(.5,0,1) - pnorm(0,0,1)
+str_glue("The P(A) is {resultA}")
+```
+
+
+B) Please give a numerical approximation to $\mathcal{P}(B)$? 
+```{r}
+resultB = pnorm(.75,0,1)-pnorm(.25,0,1)
+str_glue("The P(B) is {resultB}")
+```
+
+C) Please give a numerical approximation to $\mathcal{P}(A\cap B)$. 
+```{r}
+resultIntersection = pnorm(.5,0,1)-pnorm(.25,0,1)
+str_glue("The probability of the intersection is {resultIntersection}")
+```
+
+
+D) Are the events $A$ and $B$ independent? 
+
+```{r}
+calcAB = resultA * resultB
+str_glue("The probability of P(A) * P(B) is {calcAB}. This is not the same as P(A) intersect P(B) which is {resultIntersection}. Therefore these events are depedent.")
+```
+
+
+
+
+
+
+
+
+
+
