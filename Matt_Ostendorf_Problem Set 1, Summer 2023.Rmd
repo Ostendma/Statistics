@@ -1,0 +1,252 @@
+---
+title: "Problem Set 1, Summer 2023"
+author: "Matt Ostendorf"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=TRUE}
+
+# Load any packages, if any, that you use as part of your answers here
+
+# For example: 
+library(ggplot2)
+library(ggpubr)
+library(lawstat)
+library(tidyverse)
+```
+
+CONTEXT - DOUGHNUTS DATA
+
+This data set was derived from an experiment conducted by Lowe (1935) (obtained from Snedecor & Cochran, 1989). 
+
+Lowe wanted to learn more about how much fat doughnuts absorb when cooked in different kinds of fat. He tested four kinds of fats (fat_type): canola oil, vegetable shortening, peanut oil, and sunflower oil. He cooked six identical batches of doughnuts using each type of fat. Each batch contained 24 doughnuts. The outcome of interest was the total amount of fat (in grams) absorbed by each batch of doughnuts (total_fat).
+
+Run the code chunk below to read the data into memory and change the type of a variable. 
+
+```{r }
+
+doughnuts <- read.csv("doughnuts.csv",header=TRUE,sep=",") # Loads the CSV file into memory. You may need to adapt this line to work on your computer
+
+doughnuts$fat_type_factor <- as.factor(doughnuts$fat_type) # Creates a new variable and tells R that the values are categorical ("factor")
+
+```
+
+Run the code chunk below to confirm that the variables are of the appropriate type. The str() function is useful for checking four things: The number of rows ("observations"), the number of variables, the names of the variables, and the type of the variables. 
+
+The str() function should confirm all of these for you about this data set. This data set should have 24 rows and three variables. One of these variables, fat_type, should be a character-type ("chr") variable. Another of those variables, total_fat, should be an integer-type ("int") variable. The remaining variable, fat_type_factor, should be a factor-type variable with four levels. 
+
+```{r}
+
+str(doughnuts)
+
+```
+
+## Question 1 - 10 points
+
+Compute the mean and standard deviation for each fat type. Hint: You have sample data, not population data; this matters for computing the standard deviation. 
+
+```{r }
+
+# Write your code to compute your group means and standard deviations in this code chunk
+mean_Canola = mean(doughnuts[doughnuts$fat_type == "Canola","total_fat"])
+sd_Canola = sd(doughnuts[doughnuts$fat_type == "Canola","total_fat"])
+mean_Short = mean(doughnuts[doughnuts$fat_type == "Shortening","total_fat"])
+sd_Short = sd(doughnuts[doughnuts$fat_type == "Shortening","total_fat"])
+mean_Peanut = mean(doughnuts[doughnuts$fat_type == "Peanut","total_fat"])
+sd_Peanut = sd(doughnuts[doughnuts$fat_type == "Peanut","total_fat"])
+mean_Sunflower = mean(doughnuts[doughnuts$fat_type == "Sunflower","total_fat"])
+sd_Sunflower = sd(doughnuts[doughnuts$fat_type == "Sunflower","total_fat"])
+
+str_glue("The mean for Canola is {mean_Canola} and the sd is {sd_Canola}")
+str_glue("The mean for Shortening is {mean_Short} and the sd is {sd_Short}")
+str_glue("The mean for Peanut is {mean_Peanut} and the sd is {sd_Peanut}")
+str_glue("The mean for Sunfowloer is {mean_Sunflower} and the sd is {sd_Sunflower}")
+```
+
+Canola mean and SD (your answer here): mean = 72, sd = 13.34166
+
+Shortening mean and SD (your answer here): mean = 85, sd = 7.771744
+
+Peanut mean and SD (your answer here): mean = 76, sd = 9.879271
+
+Sunflower mean and SD (your answer here): mean = 62, sd = 8.221922
+
+
+
+Next, create a bar plot to visualize the differences in the means. There are some examples of what a bar plot is at this website: https://statisticsglobe.com/barplot-in-r. Please label your Y axis "Mean fat absorbed (grams)" and your X axis "Fat types". Please also have sub-labels for each bar that match the appropriate fat type (canola, shortening, peanut, and sunflower).
+
+Although many bar plots also include a visualization of the variability within groups (e.g., standard error bars), visualizing the variability is not necessary for full credit on this question. 
+
+```{r }
+# Write your code for your bar plot here - be sure that it displays in your knitted document
+fattypes = c("Canola", "Shortening","Peanut","Sunflower")
+mean_fat = c(mean_Canola, mean_Short,mean_Peanut,mean_Sunflower)
+df_mean = data.frame(fattypes,mean_fat)
+
+ggplot(df_mean, aes(x= fattypes, y=mean_fat)) + geom_bar(stat = "Identity") + labs(title = "Different Fat Types", y = "Mean fat absorbed (grams)",x = "Fat Types")
+
+```
+
+
+## Question 2 - 10 points
+
+You will conduct a one-way ANOVA, but let's assess our assumptions first. Assess the assumption of *normality* visually and quantitatively and comment on how well the data met this assumption.
+
+First, assess this assumption visually:
+```{r }
+
+# Code for visual assessment - be sure that your visual assessment is visible in your knitted document
+ggqqplot(doughnuts, x="total_fat", facet.by = "fat_type_factor")
+
+```
+
+Next, assess this assumption quantitatively:
+```{r}
+
+# Code for quantitative assessment - be sure that your results are visible in your knitted document
+canola <- subset(doughnuts, fat_type_factor=="Canola")
+shortening <- subset(doughnuts, fat_type_factor=="Shortening")
+peanut <- subset(doughnuts, fat_type_factor=="Peanut")
+sunflower <- subset(doughnuts, fat_type_factor=="Sunflower")
+
+shapiro.test(canola$total_fat) # Canola group test, W = 0.95004, p-value = 0.7406
+shapiro.test(shortening$total_fat) # Soybean group test, W = 0.93162, p-value = 0.5926
+shapiro.test(peanut$total_fat) # Peanut group test, W = 0.9334, p-value = 0.6066
+shapiro.test(sunflower$total_fat) # Sunflower group test, W = 0.88836, p-value = 0.3097
+
+```
+
+Finally, answer the three questions below:
+
+A) What type of visualization did you use to assess the assumption of normality visually?
+
+Your answer here: GGqqplot
+
+B) What type of quantitative test did you conduct to assess the assumption of normality quantitatively? 
+
+Your answer here: shapiro-wilk normality test
+
+C) Based on the results of your quantitative assessment, do you conclude that your data meet the assumption of normality?
+
+Your answer here: For all four fat levels, we have a p-value greater than our alpha of .05. Therefore we can fail to reject the null hypothesis that there is insufficient evidence to state that our groups are not normally distributed. We can also confirm this with our qqplot. When we look at the results of the qqplot the data appears to be fairly normal with only one outlier in the peanut and canola groups.
+
+
+
+## Question 3 - 10 points
+
+Assess the assumption of *equality of variances* visually and quantitatively and comment on how well the data met this assumption.
+
+First, assess this assumption visually:
+```{r }
+
+# Code for visual assessment - be sure that your visual assessment is visible in your knitted document
+ggplot(dat=doughnuts,aes(x=fat_type_factor,y=total_fat))+geom_boxplot()
+
+```
+
+Next, assess this assumption quantitatively:
+```{r}
+# Code for quantitative assessment - be sure that your results are visible in your knitted document
+lawstat::levene.test(y = doughnuts$total_fat, group=doughnuts$fat_type_factor, location="mean") 
+
+```
+
+Finally, answer the three questions below:
+
+A) What type of visualization did you use to assess the assumption of equal variances across groups visually?
+
+Your answer here: box plot
+
+B) What type of quantitative test did you conduct to assess the assumption of equal variances across groups quantitatively? 
+
+Your answer here: Levene's test
+
+C) Based on the results of your quantitative assessment, do you conclude that your data meet the assumption of equal variances across groups?
+
+Your answer here: The p-value from the Levene's test is greater than our alpha of 0.05, therefore we fail to reject the null hypothesis. We can conclude that we have insufficient evidence that at least one group variance is different than the others. The spread of the box plots for each category is similar, with the exception of peanuts being more condensed than the others.
+
+
+## Question 4 - 10 points
+
+You will now conduct a one-way ANOVA analysis using total_fat as the outcome and fat_type_factor as the grouping variable.
+
+First, conduct the analysis and display the result:
+```{r }
+
+# Write your code to conduct the one-way ANOVA here 
+
+doughnuts.aov <- aov(total_fat ~ fat_type_factor, data=doughnuts)# Complete this line
+  
+
+# Don't forget to display the results of your analysis by using the summary() function!
+
+summary(doughnuts.aov)  
+  
+```
+
+Second, answer the three questions below:
+
+A) What is the null hypothesis being tested in this one-way ANOVA analysis?
+
+Your answer here: That all means are the same for each type of fat.
+
+B) Based on the results of your analysis, do you reject or fail to reject the null hypothesis?
+
+Your answer here: reject the null hypothesis. This is because the p-value of .0068 is below our alpha of .05.
+
+C) Which of the three statements (1, 2, or 3) is an appropriate conclusion based on the results of your analysis? Only one of the statements is fully correct. 
+
+  Statement 1: "I rejected the null hypothesis and concluded that at least one fat type's mean amount of fat absorbed was significantly different than the other fat types."
+  
+  Statement 2: "I rejected the null hypothesis and concluded that all of the fat types had significant differences in mean amounts of fat absorbed."
+  
+  Statement 3: "I failed to reject the null hypothesis and concluded that there was not a statistically significant difference in the mean amounts of fat absorbed among the fat types." 
+  
+Your answer here (1, 2, or 3): 1
+
+
+
+
+## Question 5 - 10 points
+
+When the null hypothesis in ANOVA is rejected, you conclude that at least one group mean is different than the others. You may then wonder which of the means is different. There are numerous tests that have been developed to answer this question. These are sometimes referred to as "post hoc" tests because they are usually done after an ANOVA has returned a significant result. 
+
+One of the most common of these is the Tukey Honest Significant Difference test, often shortened to Tukey's HSD. You will conduct this analysis to determine which of the fat type means had statistically significant differences from each other. You will need to do some reading on your own to figure out how to conduct and interpret this test.
+
+First, answer the following two questions:
+
+A) How many unique pairwise comparisons of fat type means are possible to test in this data set?
+
+Your answer here: There are 6 unique pairwise comparisons
+
+B) As discussed in class, multiple pairwise comparisons cause the familywise Type 1 error rate to increase as the number of pairwise comparisons increases; this is why you will use Tukey's HSD, which adjusts for this increase to keep the familywise error rate at 0.05 (5%). If you were not aware of this problem and conducted as many independent-samples t tests as there are unique pairwise comparisons in this data set, what would the familywise Type 1 error rate for those tests be?
+
+Your answer here: 1 - (1-alpha )^(uniqure pairwise comparisons)
+  1( 1 - .05)^6 = 0.2649
+
+The familywise Type 1 error accross these 6 pairwise comparisons is 26.49%
+
+Next, conduct the Tukey HSD test and answer the two questions below:
+```{r }
+
+# Write your code to conduct the Tukey HSD test here
+TukeyHSD(doughnuts.aov) 
+
+
+# Be sure that your results are visible in the knitted document
+ 
+
+```
+
+C) Based on the results of your Tukey HSD test, how many pairs of means have a statistically significant difference from each other?
+
+Your answer here: 1
+
+D) List the pair/s of means that have statistically significant differences here. Be sure to include the names of the groups. 
+
+Your answer here: Sunflower-Shortening
+
+
+
